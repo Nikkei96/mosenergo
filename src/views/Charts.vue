@@ -26,6 +26,16 @@ export default {
           {
             showInLegend: false,
             data: [],
+            // point: {
+            //   events: {
+            //     mouseOver: (event) => {
+            //       this.sync(event, "over");
+            //     },
+            //     mouseOut: (event) => {
+            //       this.sync(event, "out");
+            //     },
+            //   },
+            // },
           },
         ],
       },
@@ -49,6 +59,16 @@ export default {
           {
             showInLegend: false,
             data: [],
+            // point: {
+            //   events: {
+            //     mouseOver: (event) => {
+            //       this.sync(event, "over");
+            //     },
+            //     mouseOut: (event) => {
+            //       this.sync(event, "out");
+            //     },
+            //   },
+            // },
           },
         ],
       },
@@ -85,8 +105,8 @@ export default {
       }
       this.isLoading = true;
       let i = 0;
-      // const totalIterations = 1539625;
-      const totalIterations = 153985;
+      const totalIterations = 1539625;
+      // const totalIterations = 153985;
       const hourlyConsumption = [];
 
       Papa.parse(file, {
@@ -190,6 +210,25 @@ export default {
         hcCash = hcCash.sort((hc1, hc2) => hc1.unixTime - hc2.unixTime);
         this.generateChartData(hcCash, this.chartOptionsCompany.series[0].data);
       }, 100);
+    },
+
+    sync(event, type) {
+      // console.log(this.$refs.highcharts);
+      // this.$refs.highcharts.forEach(({ chart }) => {
+      //   chart.series.forEach((series) => {
+      //     series.data.forEach((point) => {
+      //       if (type === "over") {
+      //         point.setState("hover");
+      //         chart.tooltip.refresh(point);
+      //         chart.xAxis[0].drawCrosshair(event, point);
+      //       } else {
+      //         point.setState();
+      //         chart.tooltip.hide();
+      //         chart.xAxis[0].hideCrosshair();
+      //       }
+      //     });
+      //   });
+      // });
     },
   },
 };

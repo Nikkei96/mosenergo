@@ -1,4 +1,12 @@
-# Реализация выявленного кейса для b2b в рамках хакатона "Energy Data Science Challenge"
+<div>
+  <img src='https://cdn-icons-png.flaticon.com/32/625/625396.png'>
+  <span>Проект взял 3-е место в конкурсе</span>
+</div>
+
+<h1>
+<img style='margin: 0 0 0 5px' width='20px' src='https://pananames.com/pananames/img/done.png'>
+Реализация выявленного кейса для b2b в рамках хакатона "Energy Data Science Challenge"
+</h1>
 
 ## https://eds-challenge.ru/
 

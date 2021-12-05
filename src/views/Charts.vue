@@ -1,17 +1,44 @@
 <script>
 import Papa from "papaparse";
+import Highcharts from "highcharts";
+import stockInit from "highcharts/modules/stock";
+stockInit(Highcharts);
 
 export default {
   data() {
     return {
-      // hourlyConsumption: [],
+      chartOptions: {
+        title: {
+          text: "График медианных значений потребления электроэнергии по всем юридическим лицам",
+        },
+        xAxis: {
+          type: "datetime",
+          title: {
+            text: "Дата",
+          },
+        },
+        yAxis: {
+          title: {
+            text: "Медианное значение потребления электроэнергии",
+          },
+        },
+        series: [
+          {
+            showInLegend: false,
+            data: [],
+          },
+        ],
+      },
       progress: 0,
       isLoading: false,
     };
   },
   methods: {
     selectFile(file) {
-      if (!file) return;
+      if (!file) {
+        this.chartOptions.series[0].data = [];
+        return;
+      }
       this.isLoading = true;
       let i = 0;
       // const totalIterations = 1539625;
@@ -49,7 +76,7 @@ export default {
         } else {
           chartData.push({
             energy_taken_kVth: Math.floor(energy_taken_kVth),
-            unixTime: new Date(hourlyConsumption[i - 1].unixTime * 1000),
+            unixTime: hourlyConsumption[i - 1].unixTime,
           });
           if (energy_taken_kVth > max_energy_taken_kVth) {
             max_energy_taken_kVth = Math.floor(energy_taken_kVth);
@@ -58,11 +85,14 @@ export default {
         }
       }
 
-      chartData.map((cd) => {
-        cd.energy_taken_kVth = Math.floor((cd.energy_taken_kVth / max_energy_taken_kVth) * 100);
+      const cd = chartData.map((cd) => {
+        const energy_taken_kVth = Math.floor((cd.energy_taken_kVth / max_energy_taken_kVth) * 100);
+        return [cd.unixTime * 1000 + 10800 * 1000, energy_taken_kVth];
       });
 
-      console.log(chartData);
+      console.log(cd);
+
+      this.chartOptions.series[0].data.push(...cd);
     },
   },
 };
@@ -89,6 +119,12 @@ export default {
         <v-progress-linear class="mt-1" v-if="isLoading" v-model="progress" height="20">
           <strong>Анализ данных: {{ progress }}%</strong>
         </v-progress-linear>
+      </v-col>
+    </v-row>
+
+    <v-row v-if="chartOptions.series[0].data.length">
+      <v-col>
+        <highcharts :options="chartOptions" ref="lineCharts" :constructor-type="'stockChart'" />
       </v-col>
     </v-row>
   </div>

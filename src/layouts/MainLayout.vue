@@ -5,7 +5,7 @@ export default {
     drawer: null,
     links: [
       ["mdi-home", "Главная", "/"],
-      ["mdi-chart-areaspline", "Графики", "/charts"],
+      ["mdi-chart-areaspline", "Анализ", "/charts"],
     ],
   }),
 };

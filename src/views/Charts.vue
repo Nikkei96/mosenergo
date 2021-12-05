@@ -29,14 +29,58 @@ export default {
           },
         ],
       },
+
+      chartOptionsCompany: {
+        title: {
+          text: "",
+        },
+        xAxis: {
+          type: "datetime",
+          title: {
+            text: "Дата",
+          },
+        },
+        yAxis: {
+          title: {
+            text: "Медианное значение потребления электроэнергии",
+          },
+        },
+        series: [
+          {
+            showInLegend: false,
+            data: [],
+          },
+        ],
+      },
+
       progress: 0,
       isLoading: false,
+      sortedHourlyConsumption: [],
+      priceCategory: [],
+      company: [],
+      okved: {},
+      selectedCompany: null,
+      hourlyConsumptionFull: [],
+      reinit: false,
     };
+  },
+  computed: {
+    okvedKeys() {
+      return Object.keys(this.okved);
+    },
+  },
+  watch: {
+    selectedCompany() {
+      if (this.selectedCompany) {
+        this.chartOptionsCompany.title.text = `График медианных значений потребления электроэнергии для отрасли: ${this.selectedCompany.okved_name}`;
+      }
+    },
   },
   methods: {
     selectFile(file) {
       if (!file) {
         this.chartOptions.series[0].data = [];
+        this.progress = 0;
         return;
       }
       this.isLoading = true;
@@ -50,20 +94,23 @@ export default {
         step: (results) => {
           const { registration_date, hour } = results.data;
           results.data.unixTime = new Date(`${registration_date} ${hour}:00`).getTime() / 1000;
+          this.hourlyConsumptionFull.push(results.data);
           hourlyConsumption.push(results.data);
           i++;
           this.progress = Math.floor((i / totalIterations) * 100);
 
           if (i >= totalIterations) {
             this.isLoading = false;
-            hourlyConsumption.sort((hc1, hc2) => hc1.unixTime - hc2.unixTime);
-            this.generateChartData(hourlyConsumption);
+            this.sortedHourlyConsumption = hourlyConsumption.sort(
+              (hc1, hc2) => hc1.unixTime - hc2.unixTime
+            );
+            this.generateChartData(hourlyConsumption, this.chartOptions.series[0].data);
           }
         },
       });
     },
 
-    generateChartData(hourlyConsumption) {
+    generateChartData(hourlyConsumption, target) {
       const chartData = [];
       let energy_taken_kVth = 0;
       let max_energy_taken_kVth = 0;
@@ -90,9 +137,59 @@ export default {
         return [cd.unixTime * 1000 + 10800 * 1000, energy_taken_kVth];
       });
 
-      console.log(cd);
+      target.push(...cd);
+    },
 
-      this.chartOptions.series[0].data.push(...cd);
+    setOkved(file) {
+      if (!file) {
+        this.okved = {};
+        return;
+      }
+
+      Papa.parse(file, {
+        header: true,
+        complete: (results) => {
+          let resObj = {};
+          results.data.forEach((el) => {
+            resObj[el.id] = el.okved_name;
+          });
+          this.okved = resObj;
+        },
+      });
+    },
+
+    setPriceCategory(file) {
+      if (!file) {
+        this.priceCategory = [];
+        return;
+      }
+
+      let company = [];
+
+      Papa.parse(file, {
+        header: true,
+        complete: (results) => {
+          this.priceCategory = results.data.filter((r) => Number(r.useful_vacation_kVt > 0));
+          this.priceCategory.forEach((pc) => {
+            if (typeof this.okved[pc.id] !== "undefined") {
+              company.push({
+                id: pc.id,
+                okved_name: this.okved[pc.id],
+              });
+            }
+          });
+          this.company = company;
+        },
+      });
+    },
+
+    createChart() {
+      this.chartOptionsCompany.series[0].data = [];
+      setTimeout(() => {
+        let hcCash = this.hourlyConsumptionFull.filter((hc) => hc.id == this.selectedCompany.id);
+        hcCash = hcCash.sort((hc1, hc2) => hc1.unixTime - hc2.unixTime);
+        this.generateChartData(hcCash, this.chartOptionsCompany.series[0].data);
+      }, 100);
     },
   },
 };
@@ -124,7 +221,69 @@ export default {
 
     <v-row v-if="chartOptions.series[0].data.length">
       <v-col>
-        <highcharts :options="chartOptions" ref="lineCharts" :constructor-type="'stockChart'" />
+        <highcharts :options="chartOptions" ref="highcharts" :constructor-type="'stockChart'" />
+      </v-col>
+    </v-row>
+
+    <v-row>
+      <v-col>
+        <v-label>Выберите файл с ОКВЭД по ЮЛ </v-label>
+      </v-col>
+      <v-col cols="9">
+        <v-file-input
+          :disabled="!chartOptions.series[0].data.length"
+          accept=".csv"
+          hide-details
+          label="csv-file"
+          show-size
+          outlined
+          dense
+          @change="setOkved"
+        />
+      </v-col>
+    </v-row>
+
+    <v-row>
+      <v-col>
+        <v-label>Выберите файл с ценовыми категориями </v-label>
+      </v-col>
+      <v-col cols="9">
+        <v-file-input
+          :disabled="!okvedKeys.length"
+          accept=".csv"
+          hide-details
+          label="csv-file"
+          show-size
+          outlined
+          dense
+          @change="setPriceCategory"
+        />
+      </v-col>
+    </v-row>
+
+    <v-row>
+      <v-col>
+        <v-select
+          v-if="company.length"
+          v-model="selectedCompany"
+          @change="createChart"
+          :items="company"
+          label="Выберите отрасль"
+          item-text="okved_name"
+          return-object
+          dense
+          outlined
+        ></v-select>
+      </v-col>
+    </v-row>
+
+    <v-row v-if="chartOptionsCompany.series[0].data.length && !reinit">
+      <v-col>
+        <highcharts
+          ref="highcharts"
+          :options="chartOptionsCompany"
+          :constructor-type="'stockChart'"
+        />
       </v-col>
     </v-row>
   </div>
